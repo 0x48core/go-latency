@@ -1,6 +1,6 @@
 # Two-Level Caching in Go: Resilience, Fallbacks, and Failure Isolation
 
-![1774111018234](image/README/1774111018234.png)
+![1774111018234](../image/1774111018234.png)
 
 ## The Architecture: L1 + L2
 
