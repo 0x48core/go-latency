@@ -3,7 +3,7 @@ module github.com/augustus281/go-latency/singleflight
 go 1.25.1
 
 require (
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.3
 	golang.org/x/sync v0.19.0
