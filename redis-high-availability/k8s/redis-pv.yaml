@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv-0
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: redis-static
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/redis/node0
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv-1
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: redis-static
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/redis/node1
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv-2
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: redis-static
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/redis/node2

@@ -1,0 +1,10 @@
+Redis Sentinel Client deployed successfully.
+
+Check pod status:
+  kubectl get pods -n {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+View logs:
+  kubectl logs -n {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}" -f
+
+Redis Sentinel: {{ .Values.redis.sentinelAddrs }}
+Master name:    {{ .Values.redis.masterName }}
