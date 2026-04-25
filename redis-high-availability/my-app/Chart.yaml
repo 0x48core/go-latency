@@ -1,0 +1,6 @@
+apiVersion: v2
+name: redis-sentinel-client
+description: Go app that connects to Redis via Sentinel
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

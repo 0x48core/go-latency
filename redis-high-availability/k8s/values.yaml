@@ -1,0 +1,52 @@
+architecture: replication
+auth:
+  enabled: true
+  password: StrongPassword123
+master:
+  persistence:
+    enabled: true
+    storageClass: redis-static
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  configuration: |-
+    maxmemory 800mb
+    maxmemory-policy allkeys-lru
+replica:
+  replicaCount: 3
+  persistence:
+    enabled: true
+    storageClass: redis-static
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  configuration: |-
+    maxmemory 900mb
+    maxmemory-policy allkeys-lru
+sentinel:
+  enabled: true
+  quorum: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  startupProbe:
+    enabled: false
+  service:
+    type: NodePort
+    nodePorts:
+      redis: "30013"
+      sentinel: "30021"

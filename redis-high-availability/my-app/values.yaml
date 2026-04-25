@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: redis-sentinel-client
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+redis:
+  sentinelAddrs: "redis-ha.redis.svc.cluster.local:26379"
+  masterName: "mymaster"
+  password: "StrongPassword123"
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
