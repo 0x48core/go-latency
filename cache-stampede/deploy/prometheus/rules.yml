@@ -1,0 +1,80 @@
+groups:
+
+  - name: cache_stampede_alerts
+    rules:
+
+      # ── Cache health ───────────────────────────────────────────────────────
+
+      # Fire when hit rate drops below 70% over the last 5 minutes
+      - alert: LowCacheHitRate
+        expr: |
+          rate(cache_requests_total{result="hit"}[5m])
+          /
+          rate(cache_requests_total[5m]) < 0.70
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache hit rate is low ({{ $value | humanizePercentage }})"
+          description: >
+            Cache hit rate has been below 70% for 2 minutes.
+            This may indicate the cache TTL is too short or a recent deployment
+            flushed the cache.
+
+      # Fire when self-fetch rate spikes — waiters are timing out
+      - alert: HighSelfFetchRate
+        expr: rate(cache_self_fetch_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High self-fetch rate ({{ $value | humanize }} req/s)"
+          description: >
+            More than 5 self-fetches per second means waiters are not receiving
+            Pub/Sub notifications in time. Check Redis Pub/Sub latency or increase
+            WaitTimeout.
+
+      # ── Fetch latency ──────────────────────────────────────────────────────
+
+      # Fire when p99 fetch latency exceeds 1 second
+      - alert: SlowFetchLatency
+        expr: |
+          histogram_quantile(0.99,
+            rate(cache_fetch_duration_seconds_bucket[5m])
+          ) > 1.0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p99 fetch latency is {{ $value | humanizeDuration }}"
+          description: >
+            The 99th-percentile fetchFn duration exceeds 1 second.
+            Consider adding a timeout to your fetchFn or optimising the query.
+
+      # ── Circuit breaker ────────────────────────────────────────────────────
+
+      # Fire when the circuit breaker is open
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state{state="open"} == 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker is OPEN"
+          description: >
+            The circuit breaker has been open for 30 seconds.
+            All DB requests are being rejected. Check database health.
+
+      # ── XFetch ────────────────────────────────────────────────────────────
+
+      # Fire when background refresh errors spike
+      - alert: XFetchBackgroundErrors
+        expr: rate(xfetch_background_error_total[5m]) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "XFetch background refresh errors ({{ $value | humanize }} err/s)"
+          description: >
+            Background refresh goroutines are failing. The stale value will
+            continue to be served until a synchronous miss triggers a fresh fetch.
