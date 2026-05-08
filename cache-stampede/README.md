@@ -90,6 +90,8 @@ For true distributed coalescing, combine the in-process coalescer with a distrib
 
 In production systems, you often combine multiple strategies for defense in depth. Here is a recommended layered approach
 
+![img.png](images/combining_strategies.png)
+
 ## Monitoring and Alerting
 
 Stampede prevention mechanisms can mask underlying issues. Monitor these metrics to catch problems before they escalate:
@@ -106,6 +108,9 @@ Stampede prevention mechanisms can mask underlying issues. Monitor these metrics
 2. More than 5% of requests receiving stale data
 3. Background refresh error rate above 1%
 4. Sudden drop in cache hit ratio by more than 20%
+
+![img.png](images/prometheus.png)
+![img.png](images/dashboard.png)
 
 ## Common Pitfalls
 
