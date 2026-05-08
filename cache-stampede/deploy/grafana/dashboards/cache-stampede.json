@@ -1,0 +1,169 @@
+{
+  "title": "Cache Stampede Prevention",
+  "uid": "cache-stampede",
+  "schemaVersion": 38,
+  "version": 2,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+
+    {
+      "id": 1,
+      "title": "Cache Hit Rate",
+      "type": "gauge",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0, "max": 1,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": 0   },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "green",  "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "(sum(rate(cache_requests_total{result=\"hit\"}[2m])) or vector(0)) / clamp_min(sum(rate(cache_requests_total[2m])) or vector(0), 1e-9)",
+        "legendFormat": "Hit Rate"
+      }]
+    },
+
+    {
+      "id": 2,
+      "title": "Requests by Result Type (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 6, "y": 0, "w": 18, "h": 5 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "expr": "sum(rate(cache_requests_total{result=\"hit\"}[2m]))",             "legendFormat": "hit" },
+        { "expr": "sum(rate(cache_requests_total{result=\"miss\"}[2m]))",            "legendFormat": "miss" },
+        { "expr": "sum(rate(cache_requests_total{result=\"stale\"}[2m]))",           "legendFormat": "stale" },
+        { "expr": "sum(rate(cache_requests_total{result=\"lock_contention\"}[2m]))", "legendFormat": "lock_contention" },
+        { "expr": "sum(rate(cache_requests_total{result=\"self_fetch\"}[2m]))",      "legendFormat": "self_fetch" },
+        { "expr": "sum(rate(cache_requests_total{result=\"double_check_hit\"}[2m]))","legendFormat": "double_check_hit" }
+      ]
+    },
+
+    {
+      "id": 3,
+      "title": "fetchFn Latency (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 6 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cache_fetch_duration_seconds_bucket[2m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cache_fetch_duration_seconds_bucket[2m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cache_fetch_duration_seconds_bucket[2m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+
+    {
+      "id": 4,
+      "title": "Self-Fetch Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 6 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [{
+        "expr": "sum(rate(cache_self_fetch_total[2m]))",
+        "legendFormat": "self-fetch fallbacks"
+      }]
+    },
+
+    {
+      "id": 5,
+      "title": "XFetch Events (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 11, "w": 12, "h": 6 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "expr": "sum(rate(xfetch_requests_total{result=\"hit\"}[2m]))",           "legendFormat": "hit" },
+        { "expr": "sum(rate(xfetch_requests_total{result=\"miss\"}[2m]))",          "legendFormat": "miss" },
+        { "expr": "sum(rate(xfetch_requests_total{result=\"early_refresh\"}[2m]))", "legendFormat": "early_refresh" }
+      ]
+    },
+
+    {
+      "id": 6,
+      "title": "XFetch Background Errors (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 11, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red",   "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(xfetch_background_error_total[2m]))",
+        "legendFormat": "bg errors"
+      }]
+    },
+
+    {
+      "id": 7,
+      "title": "Coalescing — Dedup vs Fetcher (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 6 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "expr": "sum(rate(coalescing_events_total{type=\"dedup\"}[2m]))",   "legendFormat": "dedup (waiters)" },
+        { "expr": "sum(rate(coalescing_events_total{type=\"fetcher\"}[2m]))", "legendFormat": "fetcher (real calls)" }
+      ]
+    },
+
+    {
+      "id": 8,
+      "title": "Circuit Breaker State",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 17, "w": 6, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "ACTIVE", "color": "green" }, "0": { "text": "", "color": "transparent" } } }
+          ]
+        }
+      },
+      "targets": [
+        { "expr": "circuit_breaker_state{state=\"closed\"}",    "legendFormat": "Closed" },
+        { "expr": "circuit_breaker_state{state=\"open\"}",      "legendFormat": "Open" },
+        { "expr": "circuit_breaker_state{state=\"half_open\"}", "legendFormat": "Half-Open" }
+      ]
+    },
+
+    {
+      "id": 9,
+      "title": "Circuit Breaker Events (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 18, "y": 17, "w": 6, "h": 6 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "expr": "sum(rate(circuit_breaker_events_total{event=\"failure\"}[2m]))",   "legendFormat": "failures" },
+        { "expr": "sum(rate(circuit_breaker_events_total{event=\"success\"}[2m]))",   "legendFormat": "successes" },
+        { "expr": "sum(rate(circuit_breaker_events_total{event=\"open\"}[2m]))",      "legendFormat": "tripped open" },
+        { "expr": "sum(rate(circuit_breaker_events_total{event=\"half_open\"}[2m]))", "legendFormat": "half-open probe" }
+      ]
+    }
+
+  ]
+}

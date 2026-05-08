@@ -1,0 +1,34 @@
+global:
+  scrape_interval:     15s   # how often to scrape targets
+  evaluation_interval: 15s   # how often to evaluate alerting rules
+  scrape_timeout:      10s
+
+rule_files:
+  - "rules.yml"
+
+scrape_configs:
+
+  # ── Prometheus self-scrape ─────────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ── cache-stampede app ────────────────────────────────────────────────────
+  - job_name: cache_stampede
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:9090"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: cache-stampede-app
+
+  # ── loadtest process (runs on host) ───────────────────────────────────────
+  - job_name: cache_stampede_loadtest
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9092"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: loadtest
