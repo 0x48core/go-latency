@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+// XFetch compute event type constants.
+const (
+	EventFetchDone       = "fetch_done"       // fetchFn completed successfully
+	EventBackgroundError = "background_error" // background refresh goroutine failed
+)
+
 // computeAndStore calls fetchFn, measures how long it takes, builds a
 // CacheEntry with the real delta and future expiry, then writes it to Redis.
 //
@@ -19,7 +25,8 @@ func computeAndStore[T any](
 	key string,
 	cacheKey string,
 	fetchFn func(ctx context.Context) (T, error),
-	opts XFetchOptions) (T, error) {
+	opts XFetchOptions,
+) (T, error) {
 	// Measure how long the actual fetch takes so future reads have an
 	// accurate delta for the XFetch probability formula
 	start := time.Now()
@@ -38,6 +45,8 @@ func computeAndStore[T any](
 	// formula too conservative and delay future proactive refreshes
 	delta = math.Max(delta, opts.Delta)
 
+	c.emitXFetch(key, EventFetchDone)
+
 	entry := CacheEntry[T]{
 		Value: value,
 		// Store expiry as a float64 Unix timestamp so the probability formula
@@ -48,7 +57,7 @@ func computeAndStore[T any](
 
 	data, err := json.Marshal(entry)
 	if err != nil {
-		// Marshaling failed — return the value anyway, just uncached
+		// Marshalling failed — return the value anyway, just uncached
 		return value, nil
 	}
 
@@ -64,7 +73,7 @@ func computeAndStore[T any](
 // received the stale value and should not be blocked.
 //
 // context.Background() is used instead of the caller's ctx so that the
-// refresh is not canceled if the original HTTP request ends before the
+// refresh is not cancelled if the original HTTP request ends before the
 // background write completes.
 func refreshInBackground[T any](
 	c *XFetchCache,
@@ -77,6 +86,7 @@ func refreshInBackground[T any](
 		bgCtx := context.Background()
 		_, err := computeAndStore(bgCtx, c, key, cacheKey, fetchFn, opts)
 		if err != nil {
+			c.emitXFetch(key, EventBackgroundError)
 			log.Printf("xfetch: background refresh failed for key %s: %v", key, err)
 		}
 	}()

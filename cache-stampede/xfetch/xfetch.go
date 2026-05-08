@@ -10,6 +10,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// XFetch event type constants — passed to XFetchCache.OnEvent.
+const (
+	EventHit          = "hit"           // value returned from cache (may trigger background refresh)
+	EventMiss         = "miss"          // cache miss; computing synchronously
+	EventEarlyRefresh = "early_refresh" // probabilistic early refresh triggered
+)
+
 // XFetchOptions configures the behavior of the XFetch algorithm.
 type XFetchOptions struct {
 	TTL   time.Duration // how long the fresh value lives in Redis
@@ -17,8 +24,8 @@ type XFetchOptions struct {
 	Beta  float64       // refresh aggressiveness: 0.5=aggressive, 1.0=balanced, 2.0=conservative
 }
 
-// CacheEntry is what gets serialized to JSON and stored in Redis.
-// It carries the value itself plus the metadata needed to decide
+// CacheEntry is what gets serialised to JSON and stored in Redis.
+// It carries the value plus the metadata needed to decide
 // whether to trigger an early refresh on the next read.
 type CacheEntry[T any] struct {
 	Value  T       `json:"value"`
@@ -28,12 +35,21 @@ type CacheEntry[T any] struct {
 
 // XFetchCache wraps a Redis client.
 // Create one instance per application and reuse it across calls.
+// Set OnEvent to receive observability events (e.g. for Prometheus metrics).
 type XFetchCache struct {
-	rdb *redis.Client
+	rdb     *redis.Client
+	OnEvent func(key, eventType string) // optional; nil = no-op
 }
 
 func NewXFetchCache(rdb *redis.Client) *XFetchCache {
 	return &XFetchCache{rdb: rdb}
+}
+
+// emitXFetch fires c.OnEvent if set.
+func (c *XFetchCache) emitXFetch(key, eventType string) {
+	if c.OnEvent != nil {
+		c.OnEvent(key, eventType)
+	}
 }
 
 // GetWithXFetch retrieves a value using the XFetch probabilistic early-recomputation algorithm.
@@ -76,13 +92,16 @@ func GetWithXFetch[T any](
 			if rand.Float64() < probability {
 				// Trigger a background refresh — the caller gets the stale value
 				// immediately without waiting for recomputation
+				c.emitXFetch(key, EventEarlyRefresh)
 				refreshInBackground(c, key, cacheKey, fetchFn, opts)
 			}
-		}
 
-		return entry.Value, nil
+			c.emitXFetch(key, EventHit)
+			return entry.Value, nil
+		}
 	}
 
 	// Cache miss (or corrupt entry) — must compute synchronously
+	c.emitXFetch(key, EventMiss)
 	return computeAndStore(ctx, c, key, cacheKey, fetchFn, opts)
 }

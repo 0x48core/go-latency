@@ -5,6 +5,12 @@ import (
 	"sync"
 )
 
+// Coalescing event type constants — passed to CoalescingCache.OnEvent.
+const (
+	EventDedup   = "dedup"   // this goroutine was a waiter (request deduplicated)
+	EventFetcher = "fetcher" // this goroutine became the designated fetcher
+)
+
 // call represents a single in-flight or completed request.
 // It is the Go equivalent of a Promise — multiple goroutines can
 // block on the done channel and all receive the result at once
@@ -19,9 +25,11 @@ type call[T any] struct {
 // within a single process. If 100 goroutines ask for "user:42" at
 // the same time, only one fetchFn call is made; the other 99 wait
 // and share the result.
+// Set OnEvent to receive observability events (e.g. for Prometheus metrics).
 type CoalescingCache struct {
 	mu       sync.Mutex            // protects the inflight map — maps are not goroutine-safe
 	inflight map[string]*call[any] // key → in-flight request
+	OnEvent  func(key, eventType string) // optional; nil = no-op
 }
 
 func NewCoalescingCache() *CoalescingCache {
@@ -30,12 +38,19 @@ func NewCoalescingCache() *CoalescingCache {
 	}
 }
 
+// emit fires c.OnEvent if set.
+func (c *CoalescingCache) emit(key, eventType string) {
+	if c.OnEvent != nil {
+		c.OnEvent(key, eventType)
+	}
+}
+
 // Get returns the value for key, calling fetchFn at most once per
 // concurrent group of callers.
 //
 // Flow:
 //  1. Lock and check the inflight map.
-//  2. If a call is already running → unlock and wait on its done channel.
+//  2. If a call is already running → unlock, emit dedup, and wait on its done channel.
 //  3. If no call is running → register one, unlock, execute fetchFn,
 //     clean up the map entry, then close done to wake all waiters.
 func Get[T any](
@@ -49,6 +64,9 @@ func Get[T any](
 	// Case 1: request already in-flight for this key
 	if existing, ok := c.inflight[key]; ok {
 		c.mu.Unlock() // release lock before blocking
+
+		// This goroutine is a waiter — its request was deduplicated
+		c.emit(key, EventDedup)
 
 		select {
 		case <-ctx.Done():
@@ -67,12 +85,15 @@ func Get[T any](
 
 	// Case 2: no in-flight request — we become the fetcher.
 	// Use a distinct variable name `newCall` to avoid shadowing the
-	// receiver `c *CoalescingCache` — that was the original compile error.
+	// receiver `c *CoalescingCache`.
 	newCall := &call[any]{
 		done: make(chan struct{}),
 	}
 	c.inflight[key] = newCall
 	c.mu.Unlock() // let other goroutines find and wait on newCall
+
+	// Emit fetcher event — this goroutine will do the real work
+	c.emit(key, EventFetcher)
 
 	go func() {
 		defer func() {

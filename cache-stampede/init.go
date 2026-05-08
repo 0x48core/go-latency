@@ -24,5 +24,5 @@ func Get[T any](ctx context.Context, key string, fetchFn FetchFunc[T], opts Cach
 	if defaultCache == nil {
 		panic("cache: Init() must be called before Get()")
 	}
-	// TODO:
+	return GetWithLock(ctx, defaultCache, key, fetchFn, opts)
 }
