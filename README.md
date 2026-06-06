@@ -5,10 +5,10 @@ Each pattern lives in its own directory with a fully working demo, Docker Compos
 
 ## Patterns
 
-| Pattern | Description | Directory |
-|---|---|---|
-| **Singleflight** | Deduplicate concurrent requests in-process to prevent cache stampedes and protect the database from redundant load | [`singleflight/`](singleflight/) |
-| **Cache Layering** | Two-level cache (TinyLFU + Redis) with circuit breaker, graceful degradation, and stale-while-error fallback | [`cache-layering/`](cache-layering/) |
-| **Cache Stampede Prevention** | Three-strategy defence against thundering-herd: distributed lock + stale-while-revalidate, XFetch probabilistic early refresh, and request coalescing — with full Prometheus + Grafana monitoring at 1 k req/s | [`cache-stampede/`](cache-stampede/) |
-| **Snapshot** | Pre-compute expensive aggregations in the background and serve results from memory to absorb traffic spikes | [`snapshot/`](snapshot/) |
-| **Redis High Availability** | Redis Sentinel architecture in Kubernetes with automatic failover, persistent storage, and a Go client deployed via Helm | [`redis-high-availability/`](redis-high-availability/) |
+| Pattern | Description | Directory | Article |
+|---|---|---|---|
+| **Singleflight** | Deduplicate concurrent requests in-process to prevent cache stampedes and protect the database from redundant load | [`singleflight/`](singleflight/) | — |
+| **Cache Layering** | Two-level cache (TinyLFU + Redis) with circuit breaker, graceful degradation, and stale-while-error fallback | [`cache-layering/`](cache-layering/) | [Building a Resilient Two-Level Cache in Go](https://medium.com/itnext/building-a-resilient-two-level-cache-in-go-with-circuit-breaker-graceful-degradation-and-d1d9986e4865) |
+| **Cache Stampede Prevention** | Three-strategy defence against thundering-herd: distributed lock + stale-while-revalidate, XFetch probabilistic early refresh, and request coalescing — with full Prometheus + Grafana monitoring at 1 k req/s | [`cache-stampede/`](cache-stampede/) | — |
+| **Snapshot** | Pre-compute expensive aggregations in the background and serve results from memory to absorb traffic spikes | [`snapshot/`](snapshot/) | — |
+| **Redis High Availability** | Redis Sentinel architecture in Kubernetes with automatic failover, persistent storage, and a Go client deployed via Helm | [`redis-high-availability/`](redis-high-availability/) | — |
