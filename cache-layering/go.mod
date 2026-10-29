@@ -3,7 +3,7 @@ module github.com/0x48/go-latency/cache-layering
 go 1.26.0
 
 require (
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/treussart/go-cache v1.0.0
 )
